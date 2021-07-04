@@ -9,7 +9,7 @@
 <br>
 > 3 - npm run build -> Build project
 <br>
-> 4 - num run start -> Have fun! Your website is active on 3000 port.
+> 4 - npm run start -> Have fun! Your website is active on 3000 port.
 
 <br>
 <br>
