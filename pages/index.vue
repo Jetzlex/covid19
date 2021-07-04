@@ -181,15 +181,44 @@
               <option :value="countryData.CountryCode">
                 {{ countryData.Country }}
               </option>
-              <option v-for="(reqCountry, key) in countries" :key="key">
+              <option value="GLOBAL">Global</option>
+              <option
+                v-for="(reqCountry, key) in countries"
+                :key="key"
+                :value="reqCountry.ISO2"
+              >
                 {{ reqCountry.Country }}
               </option>
             </select>
-            <div class="md:grid md:grid-cols-3">
-              <div class="rounded-lg border border-gray-100 p-4 bg-white">
-                12
+            <div class="md:grid md:grid-cols-3 gap-5 mt-6">
+              <div class="rounded-lg border border-gray-200 px-4 py-6 bg-white">
+                <p class="font-semibold text-xl text-center">Confirmed</p>
+                <p class="font-semibold opacity-75 mt-1 text-lg text-center">
+                  {{ countryData.TotalConfirmed | formatNumbers }}
+                </p>
+              </div>
+              <div class="rounded-lg border border-gray-200 px-4 py-6 bg-white">
+                <p class="font-semibold text-xl text-center">Deaths</p>
+                <p class="font-semibold opacity-75 mt-1 text-lg text-center">
+                  {{ countryData.TotalDeaths | formatNumbers }}
+                </p>
+              </div>
+              <div class="rounded-lg border border-gray-200 px-4 py-6 bg-white">
+                <p class="font-semibold text-xl text-center">Recovered</p>
+                <p class="font-semibold opacity-75 mt-1 text-lg text-center">
+                  {{ countryData.TotalRecovered | formatNumbers }}
+                </p>
               </div>
             </div>
+            <div v-if="selectedCountry == 'GLOBAL'" class="mt-6">
+              <CountriesTable :allCountries="allCountries" />
+            </div>
+            <div v-else class="mt-6">
+              <CountryTable :country="countryTableData" />
+            </div>
+            <br />
+            <br />
+            <br />
           </div>
         </div>
         <div v-if="isFetched && !countryData">
@@ -235,11 +264,13 @@ export default {
       selectedCountry: null,
       countryData: null,
       isFetched: false,
+      allCountries: null,
+      countryTableData: null,
     }
   },
-  watch: {
-    country(val) {
-      console.log(val.value)
+  filters: {
+    formatNumbers(number) {
+      return number.toLocaleString()
     },
   },
   mounted() {
@@ -250,6 +281,15 @@ export default {
       })
     })
     this.countries = countries
+
+    let allCountries = []
+    this.isFetched = false
+    axios.get('https://api.covid19api.com/summary').then((res) => {
+      res.data.Countries.forEach((data) => {
+        allCountries.push(data)
+      })
+    })
+    this.allCountries = allCountries
   },
   methods: {
     closeDropdown() {
@@ -258,24 +298,28 @@ export default {
   },
   watch: {
     selectedCountry(val) {
-      this.isFetched = false
-      setTimeout(() => {
-        axios.get('https://api.covid19api.com/summary').then((res) => {
-          if (this.selectedCountry == 'GLOBAL') {
-            this.countryData = res.data.Global
-          } else {
-            res.data.Countries.forEach((data) => {
-              if (data.CountryCode == this.selectedCountry) {
-                this.countryData = data
-              }
-            })
-          }
-          this.isFetched = true
-        })
-      }, 700)
-    },
-    countryData(val) {
       console.log(val)
+      this.isFetched = false
+      axios.get('https://api.covid19api.com/summary').then((res) => {
+        if (val == 'GLOBAL') {
+          this.countryData = res.data.Global
+        } else {
+          res.data.Countries.forEach((data) => {
+            if (data.CountryCode == val) {
+              this.countryData = data
+              axios
+                .get(
+                  'https://api.covid19api.com/dayone/country/' +
+                    this.selectedCountry
+                )
+                .then((response) => {
+                  this.countryTableData = response.data
+                })
+            }
+          })
+        }
+        this.isFetched = true
+      })
     },
   },
 }
